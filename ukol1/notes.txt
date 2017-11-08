@@ -1,1 +1,0 @@
-* je spravne vytvorit protected constructor v predkovi na inicializaci?
