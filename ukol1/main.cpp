@@ -13,6 +13,7 @@
 #include <vector>
 #include <exception>
 #include <cstdint>
+#include <cctype>
 
 
 class AbstractOperation {
@@ -32,8 +33,11 @@ protected:
     std::unique_ptr<AbstractOperation> left;
     std::unique_ptr<AbstractOperation> right;
     int_least32_t value;
+    int_least32_t * x_ptr;
     AbstractOperation( std::unique_ptr<AbstractOperation> l,  std::unique_ptr<AbstractOperation> r): left {std::move(l)}, right {std::move(r)} {};
-    
+    AbstractOperation( int_least32_t val): value {val} {};
+    AbstractOperation( int_least32_t * val_ptr): x_ptr {val_ptr} {};
+
     AbstractOperation() {};
 };
 
@@ -92,10 +96,37 @@ public:
 };
 class Number: public AbstractOperation {
 public:
-    Number(int_least32_t v): value{v} {};
+    Number(int_least32_t v): AbstractOperation(v) {};
     int_least32_t compute() override{
         return value;
     };
+};
+
+class X_value: public AbstractOperation {
+public:
+    X_value(int_least32_t * x_ptr): AbstractOperation(x_ptr) {};
+    int_least32_t compute() override {
+        return * x_ptr;
+    };
+};
+
+class PostFix {
+public:
+    PostFix(std::unique_ptr<std::stack<std::unique_ptr<AbstractOperation>>> s){
+        head = std::move(s->top());
+        s->pop();
+        AbstractOperation * last = head.get();
+        while(!s->empty()){
+            last
+        }
+    };
+    int_least32_t compute(int_least32_t value){
+        
+        return 0;
+    };
+private:
+    int_least32_t x;
+    std::unique_ptr<AbstractOperation> head;
 };
 
 static bool isInt(const std::string& s){
@@ -114,31 +145,52 @@ struct InputElement {
 };
 
 int main(int argc, const char * argv[]) {
-    std::vector<std::unique_ptr<AbstractOperation>> s;
+    //unique_ptr because later it will be passed in function
+    std::unique_ptr<std::stack<std::unique_ptr<AbstractOperation>>> s;
     std::string op;
+    std::string input = "14 x 71 /+3000 x-75/*";
+    std::string nr = "";
+    
+    //first the input is splitted into logical piecies without any relation.
+    for (auto && c : input) {
+        if(isdigit(c)){
+            nr += c;
+        }
+        else {
+            if(nr.length() > 0){
+                s->push(std::make_unique<Number>(stoi(nr)));
+                nr = "";
+            }
+            
+            if (c == '+'){
+                s->push(std::make_unique<Plus>());
+            }
+            else if (c == '-'){
+                s->push(std::make_unique<Minus>());
+            }
+            else if (c == '*'){
+                s->push(std::make_unique<Multiply>());
+            }
+            else if (c == '/'){
+                s->push(std::make_unique<Divide>());
+            }
+            
+        }
+    }
     while(std::cin >> op){
         if (isInt(op)) {
-            s.push_back(std::make_unique<Number>(stoi(op)));
-        }
-        else if (op == "+"){
-            s.push_back(std::make_unique<Plus>());
-        }
-        else if (op == "-"){
-            s.push_back(std::make_unique<Minus>());
-        }
-        else if (op == "*"){
-            s.push_back(std::make_unique<Multiply>());
-        }
-        else if (op == "/"){
-            s.push_back(std::make_unique<Divide>());
+            s.push(std::make_unique<Number>(stoi(op)));
         }
         else{
             std::cout << "Error";
             return 0;
         }
     }
+    auto top = std::move(s->top());
+    s.pop();
+    auto * parent = top;
     
-    for(auto && i:s){
+    while(!s.empty()){
         
     }
     
