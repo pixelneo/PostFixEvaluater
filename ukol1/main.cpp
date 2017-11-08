@@ -40,6 +40,7 @@ protected:
 class Plus : public AbstractOperation {
 public:
     Plus(std::unique_ptr<AbstractOperation> left, std::unique_ptr<AbstractOperation> right): AbstractOperation(std::move(left), std::move(right)) {};
+    Plus(){};
     int_least32_t compute() override {
         int_least32_t r = AbstractOperation::compute_helper();
         if(r != 0)
@@ -76,6 +77,7 @@ public:
 class Divide : public AbstractOperation {
 public:
     Divide(std::unique_ptr<AbstractOperation> left, std::unique_ptr<AbstractOperation> right): AbstractOperation(std::move(left), std::move(right)) {};
+    
     int_least32_t compute() override {
         int_least32_t r = AbstractOperation::compute_helper();
         if(r != 0)
@@ -88,10 +90,57 @@ public:
         }
     };
 };
+class Number: public AbstractOperation {
+public:
+    Number(int_least32_t v): value{v} {};
+    int_least32_t compute() override{
+        return value;
+    };
+};
 
+static bool isInt(const std::string& s){
+    if(s.empty())
+        return false;
+    for (auto && c: s) {
+        if(!isdigit(c))
+            return false;
+    }
+    return true;
+}
+
+struct InputElement {
+    int_least32_t value;
+    char type;
+};
 
 int main(int argc, const char * argv[]) {
-    // insert code here...
-    std::cout << "Hello, World!\n";
+    std::vector<std::unique_ptr<AbstractOperation>> s;
+    std::string op;
+    while(std::cin >> op){
+        if (isInt(op)) {
+            s.push_back(std::make_unique<Number>(stoi(op)));
+        }
+        else if (op == "+"){
+            s.push_back(std::make_unique<Plus>());
+        }
+        else if (op == "-"){
+            s.push_back(std::make_unique<Minus>());
+        }
+        else if (op == "*"){
+            s.push_back(std::make_unique<Multiply>());
+        }
+        else if (op == "/"){
+            s.push_back(std::make_unique<Divide>());
+        }
+        else{
+            std::cout << "Error";
+            return 0;
+        }
+    }
+    
+    for(auto && i:s){
+        
+    }
+    
     return 0;
 }
