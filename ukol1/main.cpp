@@ -20,6 +20,13 @@ class AbstractOperation {
 public:
     virtual ~AbstractOperation() {};
     virtual int_least32_t compute() = 0;
+    void setLeft(std::unique_ptr<AbstractOperation> v){
+        left = std::move(v);
+    }
+    void setRight(std::unique_ptr<AbstractOperation> v){
+        right = std::move(v);
+    }
+    
 protected:
     int_least32_t compute_helper(){
         if(!left ^ !right){
@@ -33,11 +40,8 @@ protected:
     std::unique_ptr<AbstractOperation> left;
     std::unique_ptr<AbstractOperation> right;
     int_least32_t value;
-    int_least32_t * x_ptr;
     AbstractOperation( std::unique_ptr<AbstractOperation> l,  std::unique_ptr<AbstractOperation> r): left {std::move(l)}, right {std::move(r)} {};
-    AbstractOperation( int_least32_t val): value {val} {};
-    AbstractOperation( int_least32_t * val_ptr): x_ptr {val_ptr} {};
-
+    AbstractOperation(int_least32_t v): value {v} {};
     AbstractOperation() {};
 };
 
@@ -100,30 +104,52 @@ public:
     int_least32_t compute() override{
         return value;
     };
+private:
+
 };
 
 class X_value: public AbstractOperation {
 public:
-    X_value(int_least32_t * x_ptr): AbstractOperation(x_ptr) {};
+    X_value(int_least32_t * x_pointer): x_ptr {x_pointer}, AbstractOperation() {};
     int_least32_t compute() override {
         return * x_ptr;
     };
+private:
+    int_least32_t * x_ptr;
+
 };
 
 class PostFix {
 public:
+    PostFix(){
+        
+    };
     PostFix(std::unique_ptr<std::stack<std::unique_ptr<AbstractOperation>>> s){
+        set_tree(std::move(s));
+    };
+    //TODO nefunguje. kazde operaci dat ptr na stack, at si z toho vytahne co chce.
+    void set_tree(std::unique_ptr<std::stack<std::unique_ptr<AbstractOperation>>> s){
         head = std::move(s->top());
         s->pop();
         AbstractOperation * last = head.get();
         while(!s->empty()){
-            last
+            last->setRight(std::move(s->top()));
+            s->pop(); //je to potreba? nesmaze se to unique_ptrem
+            if(!s->empty()){
+                last->setLeft(std::move(s->top()));
+                s->pop();
+            }
+            
         }
+    }
+    
+    int_least32_t compute(const int_least32_t value){
+        x = value;
+        return head->compute();
     };
-    int_least32_t compute(int_least32_t value){
-        
-        return 0;
-    };
+    int_least32_t * get_x_ptr(){
+        return &x;
+    }
 private:
     int_least32_t x;
     std::unique_ptr<AbstractOperation> head;
@@ -150,6 +176,21 @@ int main(int argc, const char * argv[]) {
     std::string op;
     std::string input = "14 x 71 /+3000 x-75/*";
     std::string nr = "";
+    int_least32_t start;
+    int_least32_t end;
+    
+    //TODO osetrit to, kdyz vstup neni ints a to jestli jsou serazeny
+    if(argc >= 4 || 0){
+        int_least32_t h = atoi(argv[2]);
+        end = atoi(argv[3]);
+        
+        //sorting the arguments
+        start = std::min(h, end);
+        end = std::max(h,end);
+    }
+  
+    
+    PostFix postfix;
     
     //first the input is splitted into logical piecies without any relation.
     for (auto && c : input) {
@@ -161,7 +202,6 @@ int main(int argc, const char * argv[]) {
                 s->push(std::make_unique<Number>(stoi(nr)));
                 nr = "";
             }
-            
             if (c == '+'){
                 s->push(std::make_unique<Plus>());
             }
@@ -174,25 +214,29 @@ int main(int argc, const char * argv[]) {
             else if (c == '/'){
                 s->push(std::make_unique<Divide>());
             }
+            else if(c == 'x'){
+                s->push(std::make_unique<X_value>(postfix.get_x_ptr()));
+            }
             
         }
     }
-    while(std::cin >> op){
-        if (isInt(op)) {
-            s.push(std::make_unique<Number>(stoi(op)));
-        }
-        else{
-            std::cout << "Error";
-            return 0;
-        }
-    }
-    auto top = std::move(s->top());
-    s.pop();
-    auto * parent = top;
+    int_least32_t min = INT_LEAST32_MAX;
+    int_least32_t max = INT_LEAST32_MIN;
     
-    while(!s.empty()){
-        
+    int_least32_t current;
+    bool computed = false;
+    for (size_t x = start; x <= end; x++) {
+        current = postfix.compute(int_least32_t(x));
+        min = min < current ? min : current;
+        max = max > current ? max : current;
+        computed = true;
     }
+    if(computed){
+        std::cout << "min=" << min << " max=" << max;
+    }
+    
+    postfix.set_tree(std::move(s));
+    
     
     return 0;
 }
