@@ -20,11 +20,15 @@ class AbstractOperation {
 public:
     virtual ~AbstractOperation() {};
     virtual int_least32_t compute() = 0;
+    virtual bool initiate(std::shared_ptr<std::stack<std::unique_ptr<AbstractOperation>>> stack_ptr) = 0;
     void setLeft(std::unique_ptr<AbstractOperation> v){
         left = std::move(v);
     }
     void setRight(std::unique_ptr<AbstractOperation> v){
         right = std::move(v);
+    }
+    int_least32_t getValue() {
+        return value;
     }
     
 protected:
@@ -40,14 +44,37 @@ protected:
     std::unique_ptr<AbstractOperation> left;
     std::unique_ptr<AbstractOperation> right;
     int_least32_t value;
-    AbstractOperation( std::unique_ptr<AbstractOperation> l,  std::unique_ptr<AbstractOperation> r): left {std::move(l)}, right {std::move(r)} {};
-    AbstractOperation(int_least32_t v): value {v} {};
-    AbstractOperation() {};
+    AbstractOperation( std::unique_ptr<AbstractOperation> l,  std::unique_ptr<AbstractOperation> r): left {std::move(l)}, right {std::move(r)} {reset();};
+    AbstractOperation(int_least32_t v): value {v} {reset();};
+    AbstractOperation() {
+        reset();
+    };
+private:
+    void reset(){
+        left = nullptr;
+        right = nullptr;
+    }
 };
 
 class Plus : public AbstractOperation {
 public:
     Plus(std::unique_ptr<AbstractOperation> left, std::unique_ptr<AbstractOperation> right): AbstractOperation(std::move(left), std::move(right)) {};
+    bool initiate(std::shared_ptr<std::stack<std::unique_ptr<AbstractOperation>>> stack_ptr) override {
+        if(stack_ptr->size() >= 2){
+            right = std::move(stack_ptr->top());
+            stack_ptr->pop();
+            if(!right->initiate(stack_ptr))
+                goto end;
+            left = std::move(stack_ptr->top());
+            stack_ptr->pop();
+            if(!left->initiate(stack_ptr))
+                goto end;
+            
+        }
+    end:
+        return false;
+    };
+
     Plus(){};
     int_least32_t compute() override {
         int_least32_t r = AbstractOperation::compute_helper();
@@ -61,6 +88,23 @@ public:
 class Minus : public AbstractOperation {
 public:
     Minus(std::unique_ptr<AbstractOperation> left, std::unique_ptr<AbstractOperation> right): AbstractOperation(std::move(left), std::move(right)) {};
+    bool initiate(std::shared_ptr<std::stack<std::unique_ptr<AbstractOperation>>> stack_ptr) override {
+        if(stack_ptr->size() >= 2){
+            right = std::move(stack_ptr->top());
+            stack_ptr->pop();
+            if(!right->initiate(stack_ptr))
+                goto end;
+            left = std::move(stack_ptr->top());
+            stack_ptr->pop();
+            if(!left->initiate(stack_ptr))
+                goto end;
+            
+        }
+    end:
+        return false;
+    };
+    Minus (){};
+
     int_least32_t compute() override {
         int_least32_t r = AbstractOperation::compute_helper();
         if(r != 0)
@@ -73,6 +117,22 @@ public:
 class Multiply : public AbstractOperation {
 public:
     Multiply(std::unique_ptr<AbstractOperation> left, std::unique_ptr<AbstractOperation> right): AbstractOperation(std::move(left), std::move(right)) {};
+    bool initiate(std::shared_ptr<std::stack<std::unique_ptr<AbstractOperation>>> stack_ptr) override {
+        if(stack_ptr->size() >= 2){
+            right = std::move(stack_ptr->top());
+            stack_ptr->pop();
+            if(!right->initiate(stack_ptr))
+                goto end;
+            left = std::move(stack_ptr->top());
+            stack_ptr->pop();
+            if(!left->initiate(stack_ptr))
+                goto end;
+            
+        }
+    end:
+        return false;
+    };
+    Multiply(){};
     int_least32_t compute() override {
         int_least32_t r = AbstractOperation::compute_helper();
         if(r != 0)
@@ -85,7 +145,22 @@ public:
 class Divide : public AbstractOperation {
 public:
     Divide(std::unique_ptr<AbstractOperation> left, std::unique_ptr<AbstractOperation> right): AbstractOperation(std::move(left), std::move(right)) {};
-    
+    bool initiate(std::shared_ptr<std::stack<std::unique_ptr<AbstractOperation>>> stack_ptr) override {
+        if(stack_ptr->size() >= 2){
+            right = std::move(stack_ptr->top());
+            stack_ptr->pop();
+            if(!right->initiate(stack_ptr))
+                goto end;
+            left = std::move(stack_ptr->top());
+            stack_ptr->pop();
+            if(!left->initiate(stack_ptr))
+                goto end;
+
+        }
+    end:
+        return false;
+    };
+    Divide(){};
     int_least32_t compute() override {
         int_least32_t r = AbstractOperation::compute_helper();
         if(r != 0)
@@ -101,9 +176,14 @@ public:
 class Number: public AbstractOperation {
 public:
     Number(int_least32_t v): AbstractOperation(v) {};
+    bool initiate(std::shared_ptr<std::stack<std::unique_ptr<AbstractOperation>>> stack_ptr) override {
+        return true;
+    };
+
     int_least32_t compute() override{
         return value;
     };
+    ~Number() {};
 private:
 
 };
@@ -111,6 +191,9 @@ private:
 class X_value: public AbstractOperation {
 public:
     X_value(int_least32_t * x_pointer): x_ptr {x_pointer}, AbstractOperation() {};
+    bool initiate(std::shared_ptr<std::stack<std::unique_ptr<AbstractOperation>>> stack_ptr) override {
+        return true;
+    };
     int_least32_t compute() override {
         return * x_ptr;
     };
@@ -128,19 +211,11 @@ public:
         set_tree(std::move(s));
     };
     //TODO nefunguje. kazde operaci dat ptr na stack, at si z toho vytahne co chce.
-    void set_tree(std::unique_ptr<std::stack<std::unique_ptr<AbstractOperation>>> s){
+    void set_tree(std::shared_ptr<std::stack<std::unique_ptr<AbstractOperation>>> s){
         head = std::move(s->top());
         s->pop();
-        AbstractOperation * last = head.get();
-        while(!s->empty()){
-            last->setRight(std::move(s->top()));
-            s->pop(); //je to potreba? nesmaze se to unique_ptrem
-            if(!s->empty()){
-                last->setLeft(std::move(s->top()));
-                s->pop();
-            }
-            
-        }
+        head->initiate(s);
+        
     }
     
     int_least32_t compute(const int_least32_t value){
@@ -165,22 +240,17 @@ static bool isInt(const std::string& s){
     return true;
 }
 
-struct InputElement {
-    int_least32_t value;
-    char type;
-};
-
 int main(int argc, const char * argv[]) {
     //unique_ptr because later it will be passed in function
     std::unique_ptr<std::stack<std::unique_ptr<AbstractOperation>>> s;
     std::string op;
     std::string input = "14 x 71 /+3000 x-75/*";
     std::string nr = "";
-    int_least32_t start;
-    int_least32_t end;
+    int_least32_t start = -3;
+    int_least32_t end = 10;
     
     //TODO osetrit to, kdyz vstup neni ints a to jestli jsou serazeny
-    if(argc >= 4 || 0){
+    if(argc >= 4 || 1){
         int_least32_t h = atoi(argv[2]);
         end = atoi(argv[3]);
         
@@ -188,7 +258,12 @@ int main(int argc, const char * argv[]) {
         start = std::min(h, end);
         end = std::max(h,end);
     }
-  
+    else {
+        return 1;
+    }
+    start = -3;
+    end = 10;
+
     
     PostFix postfix;
     
@@ -199,7 +274,8 @@ int main(int argc, const char * argv[]) {
         }
         else {
             if(nr.length() > 0){
-                s->push(std::make_unique<Number>(stoi(nr)));
+                int_least32_t k = stoi(nr);
+                s->push(std::make_unique<Number>(k));
                 nr = "";
             }
             if (c == '+'){
