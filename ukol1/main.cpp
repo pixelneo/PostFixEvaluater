@@ -20,7 +20,8 @@ class AbstractOperation {
 public:
     virtual ~AbstractOperation() {};
     virtual int_least32_t compute() = 0;
-    virtual bool initiate(std::shared_ptr<std::stack<std::unique_ptr<AbstractOperation>>> stack_ptr) = 0;
+    //takes reference
+    virtual bool initiate(std::stack<std::unique_ptr<AbstractOperation>> & stack_ptr) = 0;
     void setLeft(std::unique_ptr<AbstractOperation> v){
         left = std::move(v);
     }
@@ -59,14 +60,14 @@ private:
 class Plus : public AbstractOperation {
 public:
     Plus(std::unique_ptr<AbstractOperation> left, std::unique_ptr<AbstractOperation> right): AbstractOperation(std::move(left), std::move(right)) {};
-    bool initiate(std::shared_ptr<std::stack<std::unique_ptr<AbstractOperation>>> stack_ptr) override {
-        if(stack_ptr->size() >= 2){
-            right = std::move(stack_ptr->top());
-            stack_ptr->pop();
+    bool initiate(std::stack<std::unique_ptr<AbstractOperation>> & stack_ptr) override {
+        if(stack_ptr.size() >= 2){
+            right = std::move(stack_ptr.top());
+            stack_ptr.pop();
             if(!right->initiate(stack_ptr))
                 goto end;
-            left = std::move(stack_ptr->top());
-            stack_ptr->pop();
+            left = std::move(stack_ptr.top());
+            stack_ptr.pop();
             if(!left->initiate(stack_ptr))
                 goto end;
             
@@ -88,14 +89,14 @@ public:
 class Minus : public AbstractOperation {
 public:
     Minus(std::unique_ptr<AbstractOperation> left, std::unique_ptr<AbstractOperation> right): AbstractOperation(std::move(left), std::move(right)) {};
-    bool initiate(std::shared_ptr<std::stack<std::unique_ptr<AbstractOperation>>> stack_ptr) override {
-        if(stack_ptr->size() >= 2){
-            right = std::move(stack_ptr->top());
-            stack_ptr->pop();
+    bool initiate(std::stack<std::unique_ptr<AbstractOperation>> & stack_ptr) override {
+        if(stack_ptr.size() >= 2){
+            right = std::move(stack_ptr.top());
+            stack_ptr.pop();
             if(!right->initiate(stack_ptr))
                 goto end;
-            left = std::move(stack_ptr->top());
-            stack_ptr->pop();
+            left = std::move(stack_ptr.top());
+            stack_ptr.pop();
             if(!left->initiate(stack_ptr))
                 goto end;
             
@@ -117,14 +118,14 @@ public:
 class Multiply : public AbstractOperation {
 public:
     Multiply(std::unique_ptr<AbstractOperation> left, std::unique_ptr<AbstractOperation> right): AbstractOperation(std::move(left), std::move(right)) {};
-    bool initiate(std::shared_ptr<std::stack<std::unique_ptr<AbstractOperation>>> stack_ptr) override {
-        if(stack_ptr->size() >= 2){
-            right = std::move(stack_ptr->top());
-            stack_ptr->pop();
+    bool initiate(std::stack<std::unique_ptr<AbstractOperation>> & stack_ptr) override {
+        if(stack_ptr.size() >= 2){
+            right = std::move(stack_ptr.top());
+            stack_ptr.pop();
             if(!right->initiate(stack_ptr))
                 goto end;
-            left = std::move(stack_ptr->top());
-            stack_ptr->pop();
+            left = std::move(stack_ptr.top());
+            stack_ptr.pop();
             if(!left->initiate(stack_ptr))
                 goto end;
             
@@ -145,14 +146,14 @@ public:
 class Divide : public AbstractOperation {
 public:
     Divide(std::unique_ptr<AbstractOperation> left, std::unique_ptr<AbstractOperation> right): AbstractOperation(std::move(left), std::move(right)) {};
-    bool initiate(std::shared_ptr<std::stack<std::unique_ptr<AbstractOperation>>> stack_ptr) override {
-        if(stack_ptr->size() >= 2){
-            right = std::move(stack_ptr->top());
-            stack_ptr->pop();
+    bool initiate(std::stack<std::unique_ptr<AbstractOperation>> & stack_ptr) override {
+        if(stack_ptr.size() >= 2){
+            right = std::move(stack_ptr.top());
+            stack_ptr.pop();
             if(!right->initiate(stack_ptr))
                 goto end;
-            left = std::move(stack_ptr->top());
-            stack_ptr->pop();
+            left = std::move(stack_ptr.top());
+            stack_ptr.pop();
             if(!left->initiate(stack_ptr))
                 goto end;
 
@@ -176,7 +177,9 @@ public:
 class Number: public AbstractOperation {
 public:
     Number(int_least32_t v): AbstractOperation(v) {};
-    bool initiate(std::shared_ptr<std::stack<std::unique_ptr<AbstractOperation>>> stack_ptr) override {
+    
+    //use T & - reference (object will disappear after end of function
+    bool initiate(std::stack<std::unique_ptr<AbstractOperation>> & stack_ptr) override {
         return true;
     };
 
@@ -190,15 +193,15 @@ private:
 
 class X_value: public AbstractOperation {
 public:
-    X_value(int_least32_t * x_pointer): x_ptr {x_pointer}, AbstractOperation() {};
-    bool initiate(std::shared_ptr<std::stack<std::unique_ptr<AbstractOperation>>> stack_ptr) override {
+    X_value(const int_least32_t & x_pointer): x_ptr {x_pointer}, AbstractOperation() {};
+    bool initiate(std::stack<std::unique_ptr<AbstractOperation>> & stack_ptr) override {
         return true;
     };
     int_least32_t compute() override {
-        return * x_ptr;
+        return x_ptr;
     };
 private:
-    int_least32_t * x_ptr;
+    int_least32_t x_ptr;
 
 };
 
@@ -207,42 +210,46 @@ public:
     PostFix(){
         
     };
-    PostFix(std::unique_ptr<std::stack<std::unique_ptr<AbstractOperation>>> s){
-        set_tree(std::move(s));
+    PostFix(std::stack<std::unique_ptr<AbstractOperation>> & s){
+        set_tree(s);
     };
     //TODO nefunguje. kazde operaci dat ptr na stack, at si z toho vytahne co chce.
-    void set_tree(std::shared_ptr<std::stack<std::unique_ptr<AbstractOperation>>> s){
-        head = std::move(s->top());
-        s->pop();
+    void set_tree(std::stack<std::unique_ptr<AbstractOperation>> & s){
+        head = std::move(s.top());
+        s.pop();
         head->initiate(s);
         
     }
-    
-    int_least32_t compute(const int_least32_t value){
+//    void set_tree(std::stack<std::unique_ptr<AbstractOperation>> && s){
+//        head = std::move(s.top());
+//        s.pop();
+//        head->initiate(s);
+//
+//    }
+//
+    int_least32_t compute(const int_least32_t & value){
         x = value;
         return head->compute();
     };
-    int_least32_t * get_x_ptr(){
-        return &x;
+    
+    //todo: return reference instead of pointer
+    int_least32_t & get_x_ptr(){
+        return x;
     }
 private:
     int_least32_t x;
     std::unique_ptr<AbstractOperation> head;
 };
-
-static bool isInt(const std::string& s){
-    if(s.empty())
-        return false;
-    for (auto && c: s) {
-        if(!isdigit(c))
-            return false;
-    }
-    return true;
-}
+void cou(const char & c){
+    std::cout << c << std::endl;
+};
+void cou(const std::string & c){
+    std::cout << c << std::endl;
+};
 
 int main(int argc, const char * argv[]) {
     //unique_ptr because later it will be passed in function
-    std::unique_ptr<std::stack<std::unique_ptr<AbstractOperation>>> s;
+    std::stack<std::unique_ptr<AbstractOperation>> s;
     std::string op;
     std::string input = "14 x 71 /+3000 x-75/*";
     std::string nr = "";
@@ -275,43 +282,47 @@ int main(int argc, const char * argv[]) {
         else {
             if(nr.length() > 0){
                 int_least32_t k = stoi(nr);
-                s->push(std::make_unique<Number>(k));
+                auto number = std::make_unique<Number>(k);
+                s.push(std::move(number));
                 nr = "";
             }
             if (c == '+'){
-                s->push(std::make_unique<Plus>());
+                s.push(std::make_unique<Plus>());
             }
             else if (c == '-'){
-                s->push(std::make_unique<Minus>());
+                s.push(std::make_unique<Minus>());
             }
             else if (c == '*'){
-                s->push(std::make_unique<Multiply>());
+                s.push(std::make_unique<Multiply>());
             }
             else if (c == '/'){
-                s->push(std::make_unique<Divide>());
+                s.push(std::make_unique<Divide>());
             }
             else if(c == 'x'){
-                s->push(std::make_unique<X_value>(postfix.get_x_ptr()));
+                s.push(std::make_unique<X_value>(postfix.get_x_ptr()));
             }
             
         }
     }
+    postfix.set_tree(s);
+    
     int_least32_t min = INT_LEAST32_MAX;
     int_least32_t max = INT_LEAST32_MIN;
     
     int_least32_t current;
     bool computed = false;
-    for (size_t x = start; x <= end; x++) {
+    for (int_least32_t x = start; x <= end; ++x) {
         current = postfix.compute(int_least32_t(x));
-        min = min < current ? min : current;
-        max = max > current ? max : current;
+        std::cout << current << ", ";
+        //min = min < current ? min : current;
+        //max = max > current ? max : current;
         computed = true;
     }
     if(computed){
         std::cout << "min=" << min << " max=" << max;
     }
     
-    postfix.set_tree(std::move(s));
+    postfix.set_tree(s);
     
     
     return 0;
