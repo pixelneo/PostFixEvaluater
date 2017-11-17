@@ -22,18 +22,41 @@ public:
     virtual int_least32_t compute() = 0;
     //takes reference
     virtual bool initiate(std::stack<std::unique_ptr<AbstractOperation>> & stack_ptr) = 0;
-    void setLeft(std::unique_ptr<AbstractOperation> v){
-        left = std::move(v);
-    }
-    void setRight(std::unique_ptr<AbstractOperation> v){
-        right = std::move(v);
-    }
-    int_least32_t getValue() {
-        return value;
-    }
+    virtual void setLeft(std::unique_ptr<AbstractOperation> v) = 0;
+    virtual void setRight(std::unique_ptr<AbstractOperation> v) = 0;
+    virtual int_least32_t getValue() = 0;
+    virtual void setValue(int_least32_t v) = 0;
     
 protected:
-    int_least32_t compute_helper(){
+    virtual void reset() = 0;
+    virtual int_least32_t compute_helper() = 0;
+    AbstractOperation() {
+    };
+};
+class Operation: public AbstractOperation {
+public:
+    void setLeft(std::unique_ptr<AbstractOperation> v) override {
+        left = std::move(v);
+    }
+    void setRight(std::unique_ptr<AbstractOperation> v) override{
+        right = std::move(v);
+    }
+    int_least32_t getValue() override{
+        return value;
+    }
+    void setValue(int_least32_t v) override{
+        value = v;
+    }
+protected:
+    Operation(std::unique_ptr<AbstractOperation> l, std::unique_ptr<AbstractOperation> r): left{std::move(l)}, right{std::move(r)} {};
+    Operation(int_least32_t v): value{v} {
+        reset();
+    };
+    Operation(){
+        reset();
+        
+    };
+    int_least32_t compute_helper() override{
         if(!left ^ !right){
             throw std::domain_error("Invalid input");
         }
@@ -42,24 +65,23 @@ protected:
         }
         return 0;
     };
+
     std::unique_ptr<AbstractOperation> left;
     std::unique_ptr<AbstractOperation> right;
     int_least32_t value;
-    AbstractOperation( std::unique_ptr<AbstractOperation> l,  std::unique_ptr<AbstractOperation> r): left {std::move(l)}, right {std::move(r)} {reset();};
-    AbstractOperation(int_least32_t v): value {v} {reset();};
-    AbstractOperation() {
-        reset();
-    };
 private:
-    void reset(){
+    void reset() override{
         left = nullptr;
         right = nullptr;
     }
+
 };
 
-class Plus : public AbstractOperation {
+
+
+class Plus : public Operation {
 public:
-    Plus(std::unique_ptr<AbstractOperation> left, std::unique_ptr<AbstractOperation> right): AbstractOperation(std::move(left), std::move(right)) {};
+    Plus(std::unique_ptr<AbstractOperation> l, std::unique_ptr<AbstractOperation> r): Operation(std::move(l), std::move(r)){};
     bool initiate(std::stack<std::unique_ptr<AbstractOperation>> & stack_ptr) override {
         if(stack_ptr.size() >= 2){
             right = std::move(stack_ptr.top());
@@ -72,13 +94,14 @@ public:
                 goto end;
             
         }
+        return true;
     end:
         return false;
     };
 
     Plus(){};
     int_least32_t compute() override {
-        int_least32_t r = AbstractOperation::compute_helper();
+        int_least32_t r = compute_helper();
         if(r != 0)
             return r;
         else
@@ -86,9 +109,9 @@ public:
     };
 };
 
-class Minus : public AbstractOperation {
+class Minus : public Operation {
 public:
-    Minus(std::unique_ptr<AbstractOperation> left, std::unique_ptr<AbstractOperation> right): AbstractOperation(std::move(left), std::move(right)) {};
+    Minus(std::unique_ptr<AbstractOperation> l, std::unique_ptr<AbstractOperation> r): Operation(std::move(l), std::move(r)){};
     bool initiate(std::stack<std::unique_ptr<AbstractOperation>> & stack_ptr) override {
         if(stack_ptr.size() >= 2){
             right = std::move(stack_ptr.top());
@@ -99,15 +122,15 @@ public:
             stack_ptr.pop();
             if(!left->initiate(stack_ptr))
                 goto end;
-            
         }
+        return true;
     end:
         return false;
     };
     Minus (){};
 
     int_least32_t compute() override {
-        int_least32_t r = AbstractOperation::compute_helper();
+        int_least32_t r = compute_helper();
         if(r != 0)
             return r;
         else
@@ -115,9 +138,9 @@ public:
     };
 };
 
-class Multiply : public AbstractOperation {
+class Multiply : public Operation {
 public:
-    Multiply(std::unique_ptr<AbstractOperation> left, std::unique_ptr<AbstractOperation> right): AbstractOperation(std::move(left), std::move(right)) {};
+    Multiply(std::unique_ptr<AbstractOperation> l, std::unique_ptr<AbstractOperation> r): Operation(std::move(l), std::move(r)){};
     bool initiate(std::stack<std::unique_ptr<AbstractOperation>> & stack_ptr) override {
         if(stack_ptr.size() >= 2){
             right = std::move(stack_ptr.top());
@@ -128,14 +151,14 @@ public:
             stack_ptr.pop();
             if(!left->initiate(stack_ptr))
                 goto end;
-            
         }
+        return true;
     end:
         return false;
     };
     Multiply(){};
     int_least32_t compute() override {
-        int_least32_t r = AbstractOperation::compute_helper();
+        int_least32_t r = compute_helper();
         if(r != 0)
             return r;
         else
@@ -143,9 +166,9 @@ public:
     };
 };
 
-class Divide : public AbstractOperation {
+class Divide : public Operation {
 public:
-    Divide(std::unique_ptr<AbstractOperation> left, std::unique_ptr<AbstractOperation> right): AbstractOperation(std::move(left), std::move(right)) {};
+    Divide(std::unique_ptr<AbstractOperation> l, std::unique_ptr<AbstractOperation> r): Operation(std::move(l), std::move(r)){};
     bool initiate(std::stack<std::unique_ptr<AbstractOperation>> & stack_ptr) override {
         if(stack_ptr.size() >= 2){
             right = std::move(stack_ptr.top());
@@ -156,14 +179,14 @@ public:
             stack_ptr.pop();
             if(!left->initiate(stack_ptr))
                 goto end;
-
         }
+        return true;
     end:
         return false;
     };
     Divide(){};
     int_least32_t compute() override {
-        int_least32_t r = AbstractOperation::compute_helper();
+        int_least32_t r = compute_helper();
         if(r != 0)
             return r;
         else if(right->compute() != 0){
@@ -174,9 +197,11 @@ public:
         }
     };
 };
-class Number: public AbstractOperation {
+class Number: public Operation {
 public:
-    Number(int_least32_t v): AbstractOperation(v) {};
+    Number(int_least32_t v){
+        setValue(v);
+    };
     
     //use T & - reference (object will disappear after end of function
     bool initiate(std::stack<std::unique_ptr<AbstractOperation>> & stack_ptr) override {
@@ -191,17 +216,17 @@ private:
 
 };
 
-class X_value: public AbstractOperation {
+class X_value: public Operation {
 public:
-    X_value(const int_least32_t & x_pointer): x_ptr {x_pointer}, AbstractOperation() {};
+    X_value(const int_least32_t * const x_pointer): x_ptr {x_pointer}, Operation() {};
     bool initiate(std::stack<std::unique_ptr<AbstractOperation>> & stack_ptr) override {
         return true;
     };
     int_least32_t compute() override {
-        return x_ptr;
+        return *x_ptr;
     };
 private:
-    int_least32_t x_ptr;
+    const int_least32_t * const x_ptr;
 
 };
 
@@ -213,28 +238,20 @@ public:
     PostFix(std::stack<std::unique_ptr<AbstractOperation>> & s){
         set_tree(s);
     };
-    //TODO nefunguje. kazde operaci dat ptr na stack, at si z toho vytahne co chce.
     void set_tree(std::stack<std::unique_ptr<AbstractOperation>> & s){
         head = std::move(s.top());
         s.pop();
         head->initiate(s);
-        
     }
-//    void set_tree(std::stack<std::unique_ptr<AbstractOperation>> && s){
-//        head = std::move(s.top());
-//        s.pop();
-//        head->initiate(s);
-//
-//    }
-//
-    int_least32_t compute(const int_least32_t & value){
+
+    int_least32_t compute(int_least32_t value){
         x = value;
         return head->compute();
     };
     
     //todo: return reference instead of pointer
-    int_least32_t & get_x_ptr(){
-        return x;
+    const int_least32_t * const get_x_ptr(){
+        return &x;
     }
 private:
     int_least32_t x;
@@ -268,8 +285,8 @@ int main(int argc, const char * argv[]) {
     else {
         return 1;
     }
-    start = -3;
-    end = 10;
+    start = 1;
+    end = 2;
 
     
     PostFix postfix;
@@ -284,22 +301,23 @@ int main(int argc, const char * argv[]) {
                 int_least32_t k = stoi(nr);
                 auto number = std::make_unique<Number>(k);
                 s.push(std::move(number));
+                cou(nr);
                 nr = "";
             }
             if (c == '+'){
-                s.push(std::make_unique<Plus>());
+                s.push(std::make_unique<Plus>());cou(c);
             }
             else if (c == '-'){
-                s.push(std::make_unique<Minus>());
+                s.push(std::make_unique<Minus>());cou(c);
             }
             else if (c == '*'){
-                s.push(std::make_unique<Multiply>());
+                s.push(std::make_unique<Multiply>());cou(c);
             }
             else if (c == '/'){
-                s.push(std::make_unique<Divide>());
+                s.push(std::make_unique<Divide>());cou(c);
             }
             else if(c == 'x'){
-                s.push(std::make_unique<X_value>(postfix.get_x_ptr()));
+                s.push(std::make_unique<X_value>(postfix.get_x_ptr()));cou(c);
             }
             
         }
@@ -313,16 +331,15 @@ int main(int argc, const char * argv[]) {
     bool computed = false;
     for (int_least32_t x = start; x <= end; ++x) {
         current = postfix.compute(int_least32_t(x));
-        std::cout << current << ", ";
-        //min = min < current ? min : current;
-        //max = max > current ? max : current;
+        //std::cout << current << ", ";
+        min = min < current ? min : current;
+        max = max > current ? max : current;
         computed = true;
     }
     if(computed){
         std::cout << "min=" << min << " max=" << max;
     }
     
-    postfix.set_tree(s);
     
     
     return 0;
