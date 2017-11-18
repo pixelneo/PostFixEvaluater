@@ -179,7 +179,7 @@ void analyzeExpression(PostFix & postfix, std::stack<std::unique_ptr<AbstractOpe
     postfix.set_tree(s);
 };
 
-std::tuple<std::string, int_least32_t, int_least32_t> getInput(std::ofstream & err, const char * * argv,  int argc){
+std::tuple<std::string, int_least32_t, int_least32_t> getInput(const char ** &argv, int argc){
     //parsing arguments
     std::tuple<std::string, int_least32_t, int_least32_t> r;
     if(argc >= 4){
@@ -210,49 +210,37 @@ std::tuple<std::string, int_least32_t, int_least32_t> getInput(std::ofstream & e
 };
 
 int main(int argc, const char * * argv) {
-
     std::stack<std::unique_ptr<AbstractOperation>> s;
-    std::string op;
-    std::string input = "DEADBEEF"; //string with the expression to evaluate
-    int_least32_t start;
-    int_least32_t end;
-    
-    auto processedInput = getInput(std::cerr, argv, argc);
-
+    std::tuple<std::string, int_least32_t, int_least32_t> processedInput;
     PostFix postfix;
-    
-    //construction of the tree
+
     try {
-        analyzeExpression(postfix, s, input);
+        //getting information from input
+        processedInput = getInput(argv, argc);
+        //construction of the tree
+        analyzeExpression(postfix, s, std::get<0>(processedInput));
     }
     catch(std::exception & e){
         std::cerr << e.what();
         return 1;
     }
     
-    
     int_least32_t min = INT_LEAST32_MAX;
     int_least32_t max = INT_LEAST32_MIN;
     
     int_least32_t current;
-    bool computed = false;
     
     //evaluate expression for all x in the given interval
-    for (int_least32_t x = start; x <= end; ++x) {
+    for (int_least32_t x = std::get<1>(processedInput); x <= std::get<2>(processedInput); ++x) {
         try {
             current = postfix.compute(int_least32_t(x));
         } catch (std::domain_error & e) {
             std::cerr << e.what() << std::endl;
             continue;
         }
-        min = min < current ? min : current;
-        max = max > current ? max : current;
-        
-        computed = true;
+        min = std::min(current, min);
+        max = std::max(current, max);
     }
-    if(computed){
-        std::cout << "min=" << min << " max=" << max << std::endl;
-    }
-    
+    std::cout << "min=" << min << " max=" << max << std::endl;
     return 0;
 }
