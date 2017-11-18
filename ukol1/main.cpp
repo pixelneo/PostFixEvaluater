@@ -13,8 +13,8 @@
 class AbstractOperation {
 public:
     virtual ~AbstractOperation() {};
-    virtual int_least32_t compute() const = 0;
-    virtual bool initiate(std::stack<std::unique_ptr<AbstractOperation>> & stack_ptr) = 0;
+    virtual int_least32_t compute() const = 0; 
+    virtual bool initiate(std::stack<std::unique_ptr<AbstractOperation>> & stack_ptr) = 0; // the object takes needed amount of operators from the stack
 };
 
 class BinaryOperation: public AbstractOperation {
@@ -227,7 +227,6 @@ int main(int argc, const char * * argv) {
     
     int_least32_t min = INT_LEAST32_MAX;
     int_least32_t max = INT_LEAST32_MIN;
-    
     int_least32_t current;
     
     //evaluate expression for all x in the given interval
