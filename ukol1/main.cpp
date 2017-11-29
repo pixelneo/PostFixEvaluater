@@ -9,11 +9,12 @@
 #include <cctype>
 #include <ios>
 #include <tuple>
+#include <ctime>
 
 class AbstractOperation {
 public:
     virtual ~AbstractOperation() {};
-    virtual int_least32_t compute() const = 0; 
+    virtual int_least32_t compute() const = 0;
     virtual bool initiate(std::stack<std::unique_ptr<AbstractOperation>> & stack_ptr) = 0; // the object takes needed amount of operators from the stack
 };
 
@@ -179,7 +180,7 @@ void analyzeExpression(PostFix & postfix, std::stack<std::unique_ptr<AbstractOpe
     postfix.set_tree(s);
 };
 
-std::tuple<std::string, int_least32_t, int_least32_t> getInput(const char ** &argv, int argc){
+std::tuple<std::string, int_least32_t, int_least32_t>  getInput(const char ** &argv, int argc){
     //parsing arguments
     std::tuple<std::string, int_least32_t, int_least32_t> r;
     if(argc >= 4){
@@ -229,6 +230,7 @@ int main(int argc, const char * * argv) {
     int_least32_t max = INT_LEAST32_MIN;
     int_least32_t current;
     
+    std::clock_t begin = clock();
     //evaluate expression for all x in the given interval
     for (int_least32_t x = std::get<1>(processedInput); x <= std::get<2>(processedInput); ++x) {
         try {
@@ -240,6 +242,9 @@ int main(int argc, const char * * argv) {
         min = std::min(current, min);
         max = std::max(current, max);
     }
+    std::clock_t end = clock();
+    double secs = double(end-begin)/CLOCKS_PER_SEC;
+    std::cout << secs << std::endl;
     std::cout << "min=" << min << " max=" << max << std::endl;
     return 0;
 }
